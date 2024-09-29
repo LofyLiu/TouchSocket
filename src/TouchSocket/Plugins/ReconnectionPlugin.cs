@@ -24,6 +24,24 @@ namespace TouchSocket.Sockets
         private bool m_polling;
         private TimeSpan m_tick = TimeSpan.FromSeconds(1);
         private Task m_beginReconnectTask;
+        private bool manualClose = false;
+
+        /// <summary>
+        /// 是否启用轮询重连
+        /// </summary>
+        public bool IsPolling
+        {
+            get { return m_polling; }
+        }
+
+        /// <summary>
+        /// 手动关闭连接
+        /// </summary>
+        public bool ManualClose
+        {
+            set { manualClose = value; }
+            get { return manualClose; }
+        }
 
         /// <summary>
         /// 重连插件
@@ -238,11 +256,11 @@ namespace TouchSocket.Sockets
 
             while (true)
             {
-                if (this.DisposedValue)
+                await Task.Delay(this.Tick).ConfigureAwait(false);
+                if (this.DisposedValue || this.manualClose)
                 {
                     return;
                 }
-                await Task.Delay(this.Tick).ConfigureAwait(false);
                 try
                 {
                     var b = await this.ActionForCheck.Invoke(client, failCount).ConfigureAwait(false);

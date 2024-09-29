@@ -200,6 +200,10 @@ namespace TouchSocket.Sockets
                     this.Abort(true, msg);
                 }
             }
+            else if (this.PluginManager != null)
+            {
+                await OnTcpClosed(new ClosedEventArgs(true, TouchSocketResource.DisposeClose)).ConfigureAwait(false);
+            }
         }
 
         /// <inheritdoc/>

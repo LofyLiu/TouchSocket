@@ -45,14 +45,15 @@ namespace TouchSocket.Sockets
 
             if (e.Manual)
             {
+                base.ManualClose = true;
                 return;
             }
 
             _ = Task.Run(async () =>
             {
-                while (true)
+                while (!base.IsPolling)
                 {
-                    if (this.DisposedValue)
+                    if (this.DisposedValue || base.ManualClose)
                     {
                         return;
                     }
