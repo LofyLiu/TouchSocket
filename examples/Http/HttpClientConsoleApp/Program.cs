@@ -14,6 +14,7 @@ using System;
 using System.IO;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using TouchSocket.Core;
 using TouchSocket.Http;
@@ -33,10 +34,33 @@ namespace ClientConsoleApp
             consoleAction.Add("4", "自定义请求", Request1);
             consoleAction.Add("5", "自定义请求，并持续读取", Request2);
             consoleAction.Add("6", "自定义请求，并持续写入", BigWrite);
+            consoleAction.Add("7", "自定义Post请求，并上传流数据", UploadStream);
 
             consoleAction.ShowAll();
 
             await consoleAction.RunCommandLineAsync();
+        }
+
+        private static async Task UploadStream()
+        {
+            var client = await GetHttpClient();
+
+            using (var stream=File.OpenRead("TouchSocket.dll"))
+            {
+                //创建一个请求
+                var request = new HttpRequest(client);
+                request.SetContent(new StreamHttpContent(stream));//设置流内容
+                request.InitHeaders()
+                    .SetUrl("/bigwrite")
+                    .SetHost(client.RemoteIPHost.Host)
+                    .AsPost();
+
+                using (var responseResult = await client.RequestAsync(request, 1000 * 10))
+                {
+                    var response = responseResult.Response;
+                }
+                Console.WriteLine("完成");
+            }
         }
 
         private static async Task BigWrite()
@@ -45,20 +69,13 @@ namespace ClientConsoleApp
 
             //创建一个请求
             var request = new HttpRequest(client);
+            request.SetContent(new BigDataHttpContent());
             request.InitHeaders()
-                .SetContentLength(100 * 1000)
                 .SetUrl("/bigwrite")
                 .SetHost(client.RemoteIPHost.Host)
                 .AsPost();
 
-            var task = client.RequestAsync(request, 1000 * 10);
-
-            for (int i = 0; i < 100; i++)
-            {
-                await request.WriteAsync(new byte[1000]);
-            }
-
-            using (var responseResult = await task)
+            using (var responseResult = await client.RequestAsync(request, 1000 * 10))
             {
                 var response = responseResult.Response;
             }
@@ -146,13 +163,39 @@ namespace ClientConsoleApp
             var client = new HttpClient();
 
             var config = new TouchSocketConfig();
-            config.SetRemoteIPHost("http://localhost:7789");
+            config.SetRemoteIPHost("http://127.0.0.1:7789");
 
             //配置config
             await client.SetupAsync(config);
             await client.ConnectAsync();//先做连接
 
             return client;
+        }
+    }
+
+    class BigDataHttpContent : HttpContent
+    {
+        long count = 10000;
+        long bufferLength = 1000000;
+
+        protected override bool OnBuildingContent<TByteBlock>(ref TByteBlock byteBlock)
+        {
+            return false;
+        }
+
+        protected override void OnBuildingHeader(IHttpHeader header)
+        {
+            header.Add(HttpHeaders.ContentLength, (count * bufferLength).ToString());
+        }
+
+        protected override async Task WriteContent(Func<ReadOnlyMemory<byte>, Task> writeFunc, CancellationToken token)
+        {
+            var buffer=new byte[bufferLength];
+            for (int i = 0; i < count; i++)
+            {
+                await writeFunc.Invoke(buffer);
+                //Console.WriteLine(i);
+            }
         }
     }
 }

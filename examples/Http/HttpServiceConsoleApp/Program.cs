@@ -38,11 +38,11 @@ namespace ConsoleApp
                 })
                 .ConfigurePlugins(a =>
                 {
-                    //a.Add<MyHttpPlug1>();
-                    //a.Add<MyHttpPlug2>();
-                    //a.Add<MyHttpPlug3>();
-                    //a.Add<MyHttpPlug4>();
-                    //a.Add<MyBigFileHttpPlug>();
+                    a.Add<MyHttpPlug1>();
+                    a.Add<MyHttpPlug2>();
+                    a.Add<MyHttpPlug3>();
+                    a.Add<MyHttpPlug4>();
+                    a.Add<MyBigFileHttpPlug>();
                     a.Add<MyBigWriteHttpPlug>();
 
                     a.UseHttpStaticPage()
@@ -84,10 +84,10 @@ namespace ConsoleApp
                 {
                     try
                     {
-                        var count = 0;
+                        var count = 0L;
                         while (true)
                         {
-                            var buffer = new byte[1024 * 64];
+                            //var buffer = new byte[1024 * 64];
 
                             using (var blockResult = await e.Context.Request.ReadAsync())
                             {
@@ -96,15 +96,13 @@ namespace ConsoleApp
                                     break;
                                 }
                                 count += blockResult.Memory.Length;
-                               
+                                Console.WriteLine(blockResult.Memory.Length);
                                 //这里可以一直处理读到的数据。
-                                blockResult.Memory.CopyTo(buffer);
+                                //blockResult.Memory.CopyTo(buffer);
                             }
                         }
 
                         Console.WriteLine($"读取数据，长度={count}");
-
-                        await Task.Delay(2000);
 
                         await e.Context.Response
                                  .SetStatus()
